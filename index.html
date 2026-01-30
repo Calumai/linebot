@@ -10,12 +10,12 @@
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&display=swap');
         body { font-family: 'Noto Sans TC', sans-serif; background-color: #f8fafc; color: #1e293b; }
         .gradient-bg { background: linear-gradient(135deg, #06C755 0%, #05a346 100%); }
-        .step-card { background: white; border-radius: 1.5rem; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1); border: 1px solid #f1f5f9; }
+        .step-card { background: white; border-radius: 1.5rem; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); border: 1px solid #f1f5f9; }
         .loader { border: 3px solid #f3f3f3; border-top: 3px solid #06C755; border-radius: 50%; width: 24px; height: 24px; animation: spin 1s linear infinite; display: inline-block; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         .sticker-preview { aspect-ratio: 1/1; background-image: radial-gradient(#cbd5e1 1px, transparent 1px); background-size: 15px 15px; border-radius: 1rem; overflow: hidden; position: relative; border: 1px solid #e2e8f0; }
         .sticker-preview img { width: 100%; height: 100%; object-fit: contain; }
-        .style-btn.active { border-color: #06C755; background-color: #f0fdf4; color: #166534; font-weight: 700; transform: scale(1.05); }
+        .style-btn.active { border-color: #06C755; background-color: #f0fdf4; color: #166534; font-weight: 700; }
         .switch { position: relative; display: inline-block; width: 44px; height: 24px; }
         .switch input { opacity: 0; width: 0; height: 0; }
         .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #cbd5e1; transition: .4s; border-radius: 34px; }
@@ -27,55 +27,54 @@
 <body class="p-4 md:p-10">
     <div id="app" class="max-w-4xl mx-auto">
         <header class="text-center mb-12">
-            <h1 class="text-4xl font-black tracking-tight text-gray-900 mb-3">
+            <h1 class="text-4xl font-black text-gray-900 mb-3">
                 <span class="text-[#06C755]">LINE</span> 貼圖 Pro 生成器
             </h1>
-            <p class="text-slate-500 font-medium text-lg">使用 Imagen 4.0 與 Gemini Pro 技術打造</p>
+            <p class="text-slate-500 font-medium">使用最新 Pro 模型，支援透明去背與比例校正</p>
         </header>
 
         <!-- Step 1: Character -->
         <section class="step-card p-8 mb-8">
             <div class="flex items-center mb-6">
                 <span class="gradient-bg text-white w-10 h-10 rounded-full flex items-center justify-center font-bold mr-4 text-lg">1</span>
-                <h2 class="text-2xl font-bold">設定角色形象</h2>
+                <h2 class="text-2xl font-bold">角色與基底設定</h2>
             </div>
             
             <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div class="space-y-5">
                     <div>
-                        <span class="text-sm font-bold text-slate-700 block mb-2">上傳照片參考 (推薦)</span>
-                        <input type="file" id="upload-image" accept="image/*" class="w-full text-sm text-slate-500 file:mr-4 file:py-2.5 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-bold file:bg-green-50 file:text-green-700 hover:file:bg-green-100 transition-all cursor-pointer">
+                        <span class="text-sm font-bold text-slate-700 block mb-2">上傳參考照片 (可選)</span>
+                        <input type="file" id="upload-image" accept="image/*" class="w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-bold file:bg-green-50 file:text-green-700 hover:file:bg-green-100 transition-all cursor-pointer">
                     </div>
                     <div>
-                        <span class="text-sm font-bold text-slate-700 block mb-2">文字描述角色</span>
-                        <textarea id="character-description" rows="3" class="w-full rounded-2xl border-slate-200 shadow-sm focus:border-green-500 focus:ring-green-500 p-4 bg-slate-50 transition-all" placeholder="例如：一隻穿著深藍色毛衣的英國短毛貓，表情呆萌。"></textarea>
+                        <span class="text-sm font-bold text-slate-700 block mb-2">詳細描述你的角色 (Pro)</span>
+                        <textarea id="character-description" rows="3" class="w-full rounded-2xl border-slate-200 shadow-sm focus:border-green-500 focus:ring-green-500 p-4 bg-slate-50 transition-all" placeholder="例如：一隻戴著草帽的黃金獵犬，正在開心地笑。"></textarea>
                     </div>
-                    <button id="generate-base-character" class="w-full py-4 px-6 rounded-2xl text-white font-black text-lg gradient-bg hover:shadow-lg hover:shadow-green-200 active:scale-95 transition-all flex items-center justify-center gap-3">
+                    <button id="generate-base-character" class="w-full py-4 px-6 rounded-2xl text-white font-black text-lg gradient-bg hover:opacity-90 active:scale-95 transition-all flex items-center justify-center gap-3">
                         <span id="gen-base-spinner" class="loader hidden"></span>
                         確認角色形象
                     </button>
                 </div>
-                <div id="base-character-preview" class="border-2 border-dashed border-slate-200 rounded-3xl flex flex-col items-center justify-center bg-slate-50 min-h-[250px] relative">
-                    <p class="text-slate-400 font-medium">預覽區</p>
+                <div id="base-character-preview" class="border-2 border-dashed border-slate-200 rounded-3xl flex flex-col items-center justify-center bg-slate-50 min-h-[250px] relative overflow-hidden">
+                    <p class="text-slate-400 font-medium p-4 text-center">生成後的角色將顯示在此</p>
                 </div>
             </div>
         </section>
 
-        <!-- Step 2: Customization -->
+        <!-- Step 2: Pack Generation -->
         <section class="step-card p-8 mb-8 opacity-40 pointer-events-none transition-all duration-500" id="step-2-section">
             <div class="flex items-center mb-6">
                 <span class="gradient-bg text-white w-10 h-10 rounded-full flex items-center justify-center font-bold mr-4 text-lg">2</span>
-                <h2 class="text-2xl font-bold">風格與自動化設定</h2>
+                <h2 class="text-2xl font-bold">貼圖組生成設定</h2>
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
                 <div>
-                    <p class="text-sm font-bold text-slate-700 mb-4">貼圖畫風：</p>
-                    <div id="style-selection" class="flex gap-2.5 flex-wrap">
-                        <button data-style="Studio Ghibli style, hand-drawn anime aesthetic, warm lighting" class="style-btn px-4 py-2 text-sm rounded-full border-2 border-slate-100 bg-slate-50 text-slate-600 transition-all">吉卜力 ✨</button>
-                        <button data-style="Cute 3D render, Pixar style, soft lighting, vibrant colors" class="style-btn px-4 py-2 text-sm rounded-full border-2 border-slate-100 bg-slate-50 text-slate-600 transition-all">3D 可愛</button>
-                        <button data-style="Flat vector illustration, clean lines, minimalist" class="style-btn active px-4 py-2 text-sm rounded-full border-2 border-slate-100 bg-slate-50 text-slate-600 transition-all">簡約扁平</button>
-                        <button data-style="Soft watercolor painting, dreamy texture" class="style-btn px-4 py-2 text-sm rounded-full border-2 border-slate-100 bg-slate-50 text-slate-600 transition-all">手繪水彩</button>
+                    <p class="text-sm font-bold text-slate-700 mb-4">選擇風格：</p>
+                    <div id="style-selection" class="flex gap-2 flex-wrap">
+                        <button data-style="Studio Ghibli hand-drawn anime style, lush colors" class="style-btn px-4 py-2 text-sm rounded-full border-2 border-slate-100 bg-slate-50 text-slate-600 transition-all">吉卜力風 ✨</button>
+                        <button data-style="Cute 3D Pixar style illustration" class="style-btn px-4 py-2 text-sm rounded-full border-2 border-slate-100 bg-slate-50 text-slate-600 transition-all">3D 可愛</button>
+                        <button data-style="Flat vector illustration, clean lines" class="style-btn active px-4 py-2 text-sm rounded-full border-2 border-slate-100 bg-slate-50 text-slate-600 transition-all">簡約扁平</button>
                     </div>
                 </div>
                 <div class="flex items-center gap-5 bg-green-50/50 p-5 rounded-3xl border border-green-100">
@@ -84,20 +83,20 @@
                         <span class="slider"></span>
                     </label>
                     <div>
-                        <p class="font-bold text-green-900">自動去背模式 (Pro)</p>
-                        <p class="text-xs text-green-700 font-medium">移除背景並維持原比例</p>
+                        <p class="font-bold text-green-900">去背模式 (透明 PNG)</p>
+                        <p class="text-xs text-green-700">自動移除白底並維持原比例</p>
                     </div>
                 </div>
             </div>
 
             <div class="mb-8">
-                <p class="text-sm font-bold text-slate-700 mb-4">貼圖文字內容：</p>
+                <p class="text-sm font-bold text-slate-700 mb-4">貼圖文字 (9 張)：</p>
                 <div id="text-inputs" class="grid grid-cols-3 gap-3"></div>
             </div>
             
-            <button id="generate-stickers" class="w-full py-5 px-6 rounded-2xl text-white font-black text-xl bg-slate-900 hover:bg-black hover:shadow-xl active:scale-95 transition-all flex items-center justify-center gap-3">
+            <button id="generate-stickers" class="w-full py-5 px-6 rounded-2xl text-white font-black text-xl bg-slate-900 hover:bg-black active:scale-95 transition-all flex items-center justify-center gap-3">
                 <span id="gen-stickers-spinner" class="loader hidden"></span>
-                生成全套 9 張貼圖
+                生成 9 張 Pro 貼圖
             </button>
         </section>
 
@@ -106,39 +105,33 @@
             <div class="flex flex-col md:flex-row items-center mb-8 justify-between gap-4">
                 <div class="flex items-center">
                     <span class="gradient-bg text-white w-10 h-10 rounded-full flex items-center justify-center font-bold mr-4 text-lg">3</span>
-                    <h2 class="text-2xl font-bold">生成的貼圖組</h2>
+                    <h2 class="text-2xl font-bold">預覽與下載</h2>
                 </div>
-                <button id="download-all-stickers" class="w-full md:w-auto px-8 py-3 bg-blue-600 text-white rounded-2xl font-black hover:bg-blue-700 shadow-lg shadow-blue-100 transition-all flex items-center justify-center gap-2">
-                    下載透明 PNG 壓縮包
+                <button id="download-all-stickers" class="w-full md:w-auto px-8 py-3 bg-blue-600 text-white rounded-2xl font-black hover:bg-blue-700 shadow-lg transition-all">
+                    下載 ZIP 壓縮包
                 </button>
             </div>
-
             <div id="final-sticker-grid" class="grid grid-cols-2 md:grid-cols-3 gap-6"></div>
         </section>
 
-        <!-- Message Box -->
-        <div id="status-message" class="fixed bottom-6 right-6 max-w-sm bg-white p-5 rounded-2xl shadow-2xl border-l-8 border-green-500 hidden transform translate-y-32 transition-transform duration-500 z-50">
-            <div class="flex items-start gap-3">
-                <div id="status-icon">✅</div>
-                <p class="text-sm text-slate-800 font-bold leading-relaxed"></p>
-            </div>
+        <!-- Status Message -->
+        <div id="status-message" class="fixed bottom-6 right-6 max-w-sm bg-white p-5 rounded-2xl shadow-2xl border-l-8 border-green-500 hidden transform translate-y-32 transition-all duration-500 z-50">
+            <p class="text-sm text-slate-800 font-bold leading-relaxed"></p>
         </div>
     </div>
 
     <script>
-        const apiKey = ""; 
+        const apiKey = ""; // Runtime provides this
         let baseCharacterImage = null; 
-        let currentStylePrompt = "Flat vector illustration, clean lines, minimalist";
-        const defaultPhrases = ["早安", "謝謝", "哈哈哈", "加油", "收到", "辛苦了", "晚安", "OK", "崩潰中"];
+        let currentStylePrompt = "Flat vector illustration, clean lines";
+        const defaultPhrases = ["早安", "謝謝", "哈哈哈", "加油", "收到", "辛苦了", "晚安", "OK", "哭惹"];
         const stickersData = [];
 
         // UI Helpers
         const showStatus = (msg, isError = false) => {
             const el = document.getElementById('status-message');
-            const icon = document.getElementById('status-icon');
             el.querySelector('p').innerText = msg;
             el.style.borderLeftColor = isError ? '#ef4444' : '#06C755';
-            icon.innerText = isError ? '⚠️' : '✅';
             el.classList.remove('hidden');
             setTimeout(() => el.classList.remove('translate-y-32'), 10);
             setTimeout(() => {
@@ -159,7 +152,7 @@
             }
         };
 
-        // Init Phrases
+        // Initialize Phrases
         const phraseContainer = document.getElementById('text-inputs');
         defaultPhrases.forEach((p, i) => {
             const input = document.createElement('input');
@@ -170,7 +163,7 @@
             phraseContainer.appendChild(input);
         });
 
-        // Style Selection
+        // Style Logic
         document.querySelectorAll('.style-btn').forEach(btn => {
             btn.addEventListener('click', () => {
                 document.querySelectorAll('.style-btn').forEach(b => b.classList.remove('active'));
@@ -179,7 +172,7 @@
             });
         });
 
-        // API Call Wrapper with detailed error handling
+        // Robust API Call with Exponential Backoff
         async function callAPI(url, payload, retries = 5) {
             let delay = 1000;
             for (let i = 0; i < retries; i++) {
@@ -191,21 +184,19 @@
                     });
                     
                     const result = await response.json();
-                    
                     if (response.ok) return result;
                     
+                    // Handle Quota/Retry
                     if (response.status === 429) {
-                        if (i === retries - 1) throw new Error('API 額度已滿，請等幾分鐘再試。');
+                        if (i === retries - 1) throw new Error('API 請求過於頻繁，請稍後再試。');
                         await new Promise(r => setTimeout(r, delay));
                         delay *= 2;
                         continue;
                     }
-                    
-                    const errorMsg = result.error?.message || '未知錯誤';
-                    if (errorMsg.toLowerCase().includes('safety')) {
-                        throw new Error('內容被安全過濾，請試著更換描述。');
-                    }
-                    throw new Error(`API 錯誤: ${errorMsg}`);
+
+                    // Detailed Error for Method not found
+                    const msg = result.error?.message || JSON.stringify(result);
+                    throw new Error(`API 錯誤: ${msg}`);
                 } catch (e) {
                     if (i === retries - 1) throw e;
                     await new Promise(r => setTimeout(r, delay));
@@ -214,7 +205,7 @@
             }
         }
 
-        // Step 1: Base Character
+        // Step 1: Base Character (Imagen 4.0)
         document.getElementById('generate-base-character').addEventListener('click', async () => {
             const desc = document.getElementById('character-description').value;
             const fileInput = document.getElementById('upload-image');
@@ -226,40 +217,49 @@
             }
 
             toggleLoading('generate-base-character', 'gen-base-spinner', true);
-            previewContainer.innerHTML = '<div class="text-center"><span class="loader"></span><p class="mt-2 text-slate-500 font-bold">Pro AI 繪圖中...</p></div>';
+            previewContainer.innerHTML = '<div class="text-center"><span class="loader"></span><p class="mt-2 text-slate-500 font-bold">Pro AI 繪製中...</p></div>';
 
             try {
                 if (fileInput.files[0]) {
                     const reader = new FileReader();
                     reader.onload = (e) => {
                         baseCharacterImage = e.target.result.split(',')[1];
-                        previewContainer.innerHTML = `<img src="${e.target.result}" class="max-h-[250px] rounded-2xl shadow-md">`;
+                        previewContainer.innerHTML = `<img src="${e.target.result}" class="max-h-[250px] rounded-2xl">`;
                         document.getElementById('step-2-section').classList.remove('opacity-40', 'pointer-events-none');
-                        showStatus("照片讀取成功！");
                         toggleLoading('generate-base-character', 'gen-base-spinner', false);
+                        showStatus("照片載入成功！");
                     };
                     reader.readAsDataURL(fileInput.files[0]);
                 } else {
-                    const prompt = `A clear, isolated character mascot for a sticker set. ${desc}. Style: ${currentStylePrompt}. Solid flat white background, centered, full body.`;
+                    // Corrected Payload for Imagen 4.0 :predict
+                    const prompt = `A clean, professional character mascot for a sticker set. ${desc}. Style: ${currentStylePrompt}. Isolated on a solid flat white background, full body, centered, no clutter.`;
                     const result = await callAPI(
                         `https://generativelanguage.googleapis.com/v1beta/models/imagen-4.0-generate-001:predict`,
-                        { instances: { prompt }, parameters: { sampleCount: 1 } }
+                        { 
+                            instances: [{ prompt: prompt }], 
+                            parameters: { sampleCount: 1 } 
+                        }
                     );
                     
-                    baseCharacterImage = result.predictions[0].bytesBase64Encoded;
-                    previewContainer.innerHTML = `<img src="data:image/png;base64,${baseCharacterImage}" class="max-h-[250px] rounded-2xl shadow-md">`;
-                    document.getElementById('step-2-section').classList.remove('opacity-40', 'pointer-events-none');
-                    showStatus("角色生成成功！");
-                    toggleLoading('generate-base-character', 'gen-base-spinner', false);
+                    if (result.predictions && result.predictions[0]) {
+                        baseCharacterImage = result.predictions[0].bytesBase64Encoded;
+                        previewContainer.innerHTML = `<img src="data:image/png;base64,${baseCharacterImage}" class="max-h-[250px] rounded-2xl">`;
+                        document.getElementById('step-2-section').classList.remove('opacity-40', 'pointer-events-none');
+                        showStatus("角色生成成功！");
+                    } else {
+                        throw new Error("模型回傳結果格式異常");
+                    }
                 }
             } catch (err) {
+                console.error(err);
                 showStatus(err.message, true);
-                previewContainer.innerHTML = `<p class="text-red-500 font-bold p-4 text-center">${err.message}</p>`;
+                previewContainer.innerHTML = `<p class="text-red-500 font-bold p-6 text-center text-sm">${err.message}</p>`;
+            } finally {
                 toggleLoading('generate-base-character', 'gen-base-spinner', false);
             }
         });
 
-        // Step 2: Generate Sticker Pack
+        // Step 2: Full Pack (Gemini 2.5 Flash Image Preview)
         document.getElementById('generate-stickers').addEventListener('click', async () => {
             const phrases = Array.from({length: 9}).map((_, i) => document.getElementById(`phrase-${i}`).value);
             const shouldRemoveBg = document.getElementById('remove-bg-toggle').checked;
@@ -270,20 +270,18 @@
             grid.innerHTML = '';
             stickersData.length = 0;
 
-            // Placeholders
             for (let i = 0; i < 9; i++) {
                 const div = document.createElement('div');
                 div.className = "sticker-preview";
                 div.id = `sticker-slot-${i}`;
-                div.innerHTML = '<div class="absolute inset-0 flex flex-col items-center justify-center bg-white/60"><span class="loader"></span><p class="text-[10px] mt-1 font-bold">生成中...</p></div>';
+                div.innerHTML = '<div class="absolute inset-0 flex flex-col items-center justify-center bg-white/60"><span class="loader"></span></div>';
                 grid.appendChild(div);
             }
 
-            // Sequential generation for character consistency
             for (let i = 0; i < 9; i++) {
                 try {
                     const phrase = phrases[i];
-                    const prompt = `Create a sticker of this character expressing "${phrase}". Style: ${currentStylePrompt}. High resolution, isolated on plain white background. No text in the drawing.`;
+                    const prompt = `Modify this character to express "${phrase}". Maintain the same features and the style: ${currentStylePrompt}. Isolated on a plain white background, high quality, no text in the image.`;
 
                     const result = await callAPI(
                         `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image-preview:generateContent`,
@@ -305,20 +303,18 @@
                         const slot = document.getElementById(`sticker-slot-${i}`);
                         slot.innerHTML = `<img src="${finalImg}" class="hover:scale-105 transition-transform">`;
                         stickersData.push({ name: `sticker_${i+1}.png`, data: finalImg });
-                    } else {
-                        throw new Error("模型未回傳圖片");
                     }
                 } catch (err) {
                     console.error(err);
-                    document.getElementById(`sticker-slot-${i}`).innerHTML = `<div class="p-2 text-center text-red-500 font-bold text-[10px]">失敗: ${err.message.substring(0,20)}...</div>`;
+                    document.getElementById(`sticker-slot-${i}`).innerHTML = `<div class="p-2 text-center text-red-500 font-bold text-[10px]">失敗: ${err.message.split(':').pop().substring(0,30)}</div>`;
                 }
             }
             
             toggleLoading('generate-stickers', 'gen-stickers-spinner', false);
-            showStatus("貼圖組製作完成！");
+            showStatus("全套貼圖製作完成！");
         });
 
-        // Sticker Composition: Pro Scale & Smart BG Removal
+        // Composition: Aspect Ratio Correcting & Transparency
         async function createStickerWithText(imgSrc, text, removeBg) {
             return new Promise((resolve) => {
                 const img = new Image();
@@ -330,7 +326,6 @@
                     canvas.height = size;
                     const ctx = canvas.getContext('2d');
 
-                    // Temp canvas for BG removal
                     const temp = document.createElement('canvas');
                     temp.width = img.width;
                     temp.height = img.height;
@@ -340,29 +335,26 @@
                     if (removeBg) {
                         const imgData = tCtx.getImageData(0, 0, temp.width, temp.height);
                         const d = imgData.data;
-                        const threshold = 238; // Pro threshold for white removal
+                        const threshold = 238; 
                         for (let i = 0; i < d.length; i += 4) {
-                            if (d[i] > threshold && d[i+1] > threshold && d[i+2] > threshold) {
-                                d[i+3] = 0;
-                            }
+                            if (d[i] > threshold && d[i+1] > threshold && d[i+2] > threshold) d[i+3] = 0;
                         }
                         tCtx.putImageData(imgData, 0, 0);
                     }
 
-                    // Draw to Main Canvas with Aspect Ratio Correction
                     ctx.imageSmoothingEnabled = true;
                     ctx.imageSmoothingQuality = 'high';
                     
                     const pad = 40;
                     const maxW = size - pad * 2;
-                    const maxH = size - pad * 2 - 40;
+                    const maxH = size - pad * 2 - 50;
                     const ratio = Math.min(maxW / img.width, maxH / img.height);
                     const w = img.width * ratio;
                     const h = img.height * ratio;
 
-                    ctx.drawImage(temp, (size - w) / 2, (size - 60 - h) / 2 + 10, w, h);
+                    ctx.drawImage(temp, (size - w) / 2, (size - 70 - h) / 2 + 15, w, h);
 
-                    // Text Rendering (Pro Style)
+                    // Pro Text Style
                     ctx.font = 'bold 46px "Noto Sans TC", sans-serif';
                     ctx.textAlign = 'center';
                     const x = size / 2;
@@ -373,7 +365,7 @@
                     ctx.lineJoin = 'round';
                     ctx.strokeText(text, x, y);
 
-                    ctx.strokeStyle = '#000';
+                    ctx.strokeStyle = '#222';
                     ctx.lineWidth = 4;
                     ctx.strokeText(text, x, y);
 
@@ -386,18 +378,15 @@
             });
         }
 
-        // ZIP Download
+        // ZIP Handler
         document.getElementById('download-all-stickers').addEventListener('click', async () => {
-            if (stickersData.length === 0) {
-                showStatus("目前沒有可下載的貼圖", true);
-                return;
-            }
+            if (stickersData.length === 0) return;
             const zip = new JSZip();
             stickersData.forEach(s => zip.file(s.name, s.data.split(',')[1], { base64: true }));
             const blob = await zip.generateAsync({ type: "blob" });
             const link = document.createElement('a');
             link.href = URL.createObjectURL(blob);
-            link.download = "line_stickers_pro_pack.zip";
+            link.download = "line_stickers_pro.zip";
             link.click();
         });
     </script>
