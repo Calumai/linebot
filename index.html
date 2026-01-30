@@ -36,7 +36,7 @@
             <span id="api-status-dot" class="status-pulse pulse-yellow"></span>
             <span id="api-status-text">系統連線中...</span>
         </div>
-        <div class="text-[10px] text-slate-400">LINE Sticker Pro v2.2 (Auto-Fallback)</div>
+        <div class="text-[10px] text-slate-400">LINE Sticker Pro v2.3 (Smart-Fallback)</div>
     </div>
 
     <div id="app" class="max-w-4xl mx-auto mt-8">
@@ -97,7 +97,7 @@
                     </div>
                 </div>
                 <div class="text-sm text-slate-500 italic flex items-center">
-                    提示：系統將自動選擇最佳模型 (Gemini 2.5 或 Imagen 4.0) 為您製作 9 張貼圖。
+                    <span id="model-status-text">提示：系統優先使用 Gemini 2.5，若失敗則自動切換至 Imagen 4.0。</span>
                 </div>
             </div>
 
@@ -136,10 +136,11 @@
         const apiKey = "AIzaSyBc-fSuCZ-ciXTYeYHeSm1hkvx40nidFIs"; 
         let baseCharacterImage = null; 
         let currentStylePrompt = "Flat vector illustration, clean bold lines, minimal";
-        let savedCharacterDesc = ""; // 儲存角色描述以備救援使用
+        let savedCharacterDesc = ""; 
         const defaultPhrases = ["早安", "謝謝", "哈哈哈", "加油", "收到", "辛苦了", "晚安", "OK", "哭惹"];
         const stickersData = [];
         let isSystemReady = false;
+        let useFallbackModel = false; // 全局變數，一旦設為 true，後續請求都直接走 Fallback
 
         // UI Helpers
         const showStatus = (msg, isError = false) => {
@@ -223,8 +224,7 @@
                         delay *= 2;
                         continue;
                     }
-                    // Throw error to trigger fallback
-                    throw new Error(`API 錯誤: ${result.error?.message || response.status}`);
+                    throw new Error(`API 錯誤 (${response.status}): ${result.error?.message || response.status}`);
                 } catch (e) {
                     if (i === retries - 1) throw e;
                     await new Promise(r => setTimeout(r, delay));
@@ -244,7 +244,6 @@
                 return;
             }
 
-            // 保存描述供 Step 2 救援使用
             savedCharacterDesc = desc || "A cute character mascot"; 
 
             toggleLoading('generate-base-character', 'gen-base-spinner', true);
@@ -288,7 +287,7 @@
             }
         });
 
-        // Step 2: Pack Generation (With Smart Fallback)
+        // Step 2: Pack Generation (Smart Fallback Loop)
         document.getElementById('generate-stickers').addEventListener('click', async () => {
             const phrases = Array.from({length: 9}).map((_, i) => document.getElementById(`phrase-${i}`).value);
             const shouldRemoveBg = document.getElementById('remove-bg-toggle').checked;
@@ -298,6 +297,8 @@
             const grid = document.getElementById('final-sticker-grid');
             grid.innerHTML = '';
             stickersData.length = 0;
+            useFallbackModel = false; // 重置 Fallback 狀態
+            document.getElementById('model-status-text').innerText = "提示：系統優先使用 Gemini 2.5，若失敗則自動切換至 Imagen 4.0。";
 
             for (let i = 0; i < 9; i++) {
                 const div = document.createElement('div');
@@ -313,7 +314,12 @@
                 const slot = document.getElementById(`sticker-slot-${i}`);
 
                 try {
-                    // 1. 優先嘗試 Gemini 2.5 (圖生圖)
+                    // 如果已經觸發過 Fallback，直接跳過 Gemini 2.5
+                    if (useFallbackModel) {
+                        throw new Error("Force Fallback");
+                    }
+
+                    // 1. 嘗試 Gemini 2.5 (圖生圖)
                     const prompt = `Maintain exactly the same character features. Draw the character expressing "${phrase}". Style: ${currentStylePrompt}. Solid plain white background, high quality, no text.`;
                     
                     const result = await callAPI(
@@ -327,15 +333,19 @@
                             }],
                             generationConfig: { responseModalities: ['TEXT', 'IMAGE'] }
                         },
-                        2 // 少試幾次以便快速切換
+                        1 // 失敗一次就切換
                     );
                     genBase64 = result.candidates?.[0]?.content?.parts?.find(p => p.inlineData)?.inlineData?.data;
 
                 } catch (err) {
-                    console.warn(`Gemini 2.5 failed for ${i}, switching to Imagen 4.0 fallback. Error: ${err.message}`);
+                    // 標記為啟用 Fallback 模式，後續迴圈直接使用 Imagen 4.0
+                    if (!useFallbackModel) {
+                        useFallbackModel = true;
+                        document.getElementById('model-status-text').innerHTML = `<span class="text-amber-600 font-bold">⚠️ 已啟用救援模式：您的 Key 不支援 Gemini 2.5，系統已自動切換至 Imagen 4.0 繼續生成。</span>`;
+                        console.warn(`Gemini 2.5 failed (${err.message}). Switching to Imagen 4.0 for all subsequent requests.`);
+                    }
                     
-                    // 2. 自動切換 Imagen 4.0 (文生圖救援模式)
-                    // 使用已保存的角色描述 + 動作關鍵詞
+                    // 2. Imagen 4.0 (文生圖救援模式)
                     try {
                         slot.innerHTML = '<div class="absolute inset-0 flex flex-col items-center justify-center bg-white/60"><span class="loader"></span><span class="text-[8px] text-gray-500 mt-1">救援模式...</span></div>';
                         
