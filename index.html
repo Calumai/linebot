@@ -14,7 +14,6 @@
         .loader { border: 3px solid #f3f3f3; border-top: 3px solid #06C755; border-radius: 50%; width: 24px; height: 24px; animation: spin 1s linear infinite; display: inline-block; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         
-        /* API Status Pulse */
         .status-pulse { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: 8px; }
         .pulse-yellow { background: #eab308; box-shadow: 0 0 8px #eab308; animation: blink 1.5s infinite; }
         .pulse-green { background: #22c55e; box-shadow: 0 0 8px #22c55e; }
@@ -32,13 +31,12 @@
     </style>
 </head>
 <body class="p-4 md:p-10">
-    <!-- Top Connection Status Bar -->
     <div class="fixed top-0 left-0 w-full bg-white/80 backdrop-blur-md border-b border-slate-100 z-50 px-6 py-2 flex justify-between items-center">
         <div class="flex items-center text-xs font-bold text-slate-500">
             <span id="api-status-dot" class="status-pulse pulse-yellow"></span>
             <span id="api-status-text">系統連線中...</span>
         </div>
-        <div class="text-[10px] text-slate-400">LINE Sticker Pro v2.1</div>
+        <div class="text-[10px] text-slate-400">LINE Sticker Pro v2.2 (Auto-Fallback)</div>
     </div>
 
     <div id="app" class="max-w-4xl mx-auto mt-8">
@@ -46,7 +44,7 @@
             <h1 class="text-4xl font-black text-gray-900 mb-3">
                 <span class="text-[#06C755]">LINE</span> 貼圖 Pro 生成器
             </h1>
-            <p class="text-slate-500 font-medium">整合 Imagen 4.0 與 Gemini 2.5 專業技術</p>
+            <p class="text-slate-500 font-medium">整合 Imagen 4.0 與 Gemini 2.5 (含自動救援模式)</p>
         </header>
 
         <!-- Step 1: Character -->
@@ -61,8 +59,8 @@
                     <div>
                         <span class="text-sm font-bold text-slate-700 block mb-2 font-bold text-green-700">選擇風格：</span>
                         <div id="style-selection" class="flex gap-2 flex-wrap mb-4">
-                            <button data-style="Studio Ghibli art style, hand-drawn anime aesthetic, warm lighting, cozy atmosphere" class="style-btn px-4 py-2 text-sm rounded-full border-2 border-slate-100 bg-slate-50 text-slate-600 transition-all">吉卜力風 ✨</button>
-                            <button data-style="Cute 3D Pixar style illustration, soft texture, high detail" class="style-btn px-4 py-2 text-sm rounded-full border-2 border-slate-100 bg-slate-50 text-slate-600 transition-all">3D 可愛</button>
+                            <button data-style="Studio Ghibli art style, hand-drawn anime aesthetic, warm lighting" class="style-btn px-4 py-2 text-sm rounded-full border-2 border-slate-100 bg-slate-50 text-slate-600 transition-all">吉卜力風 ✨</button>
+                            <button data-style="Cute 3D Pixar style illustration, soft texture" class="style-btn px-4 py-2 text-sm rounded-full border-2 border-slate-100 bg-slate-50 text-slate-600 transition-all">3D 可愛</button>
                             <button data-style="Flat vector illustration, clean bold lines, minimal" class="style-btn active px-4 py-2 text-sm rounded-full border-2 border-slate-100 bg-slate-50 text-slate-600 transition-all">簡約扁平</button>
                         </div>
                         <span class="text-sm font-bold text-slate-700 block mb-2">角色詳細描述：</span>
@@ -99,7 +97,7 @@
                     </div>
                 </div>
                 <div class="text-sm text-slate-500 italic flex items-center">
-                    提示：我們將根據基礎形象與選擇畫風，為您製作 9 張不同情緒的專業貼圖。
+                    提示：系統將自動選擇最佳模型 (Gemini 2.5 或 Imagen 4.0) 為您製作 9 張貼圖。
                 </div>
             </div>
 
@@ -135,9 +133,10 @@
     </div>
 
     <script>
-        const apiKey = "AIzaSyBc-fSuCZ-ciXTYeYHeSm1hkvx40nidFIs"; // 使用者提供的 API Key
+        const apiKey = "AIzaSyBc-fSuCZ-ciXTYeYHeSm1hkvx40nidFIs"; 
         let baseCharacterImage = null; 
         let currentStylePrompt = "Flat vector illustration, clean bold lines, minimal";
+        let savedCharacterDesc = ""; // 儲存角色描述以備救援使用
         const defaultPhrases = ["早安", "謝謝", "哈哈哈", "加油", "收到", "辛苦了", "晚安", "OK", "哭惹"];
         const stickersData = [];
         let isSystemReady = false;
@@ -167,7 +166,6 @@
             }
         };
 
-        // --- API Key 監測功能 ---
         function updateSystemStatus() {
             const dot = document.getElementById('api-status-dot');
             const text = document.getElementById('api-status-text');
@@ -182,11 +180,10 @@
             } else {
                 isSystemReady = false;
                 btns.forEach(btn => btn.disabled = true);
-                setTimeout(updateSystemStatus, 1000); // 每一秒檢查一次
+                setTimeout(updateSystemStatus, 1000);
             }
         }
 
-        // Init UI
         const phraseContainer = document.getElementById('text-inputs');
         defaultPhrases.forEach((p, i) => {
             const input = document.createElement('input');
@@ -205,12 +202,7 @@
             });
         });
 
-        // Robust API Call
-        async function callAPI(url, payload, retries = 5) {
-            if (apiKey === "") {
-                throw new Error("系統連線中，請稍候再點擊。");
-            }
-            
+        async function callAPI(url, payload, retries = 3) {
             let delay = 1000;
             const fullUrl = `${url}${url.includes('?') ? '&' : '?'}key=${apiKey}`;
 
@@ -226,12 +218,13 @@
                     if (response.ok) return result;
                     
                     if (response.status === 429) {
-                        if (i === retries - 1) throw new Error("請求過於頻繁，請休息一下。");
+                        if (i === retries - 1) throw new Error("API 流量限制，請稍候。");
                         await new Promise(r => setTimeout(r, delay));
                         delay *= 2;
                         continue;
                     }
-                    throw new Error(`API 錯誤: ${result.error?.message || "未知連線問題"}`);
+                    // Throw error to trigger fallback
+                    throw new Error(`API 錯誤: ${result.error?.message || response.status}`);
                 } catch (e) {
                     if (i === retries - 1) throw e;
                     await new Promise(r => setTimeout(r, delay));
@@ -251,8 +244,11 @@
                 return;
             }
 
+            // 保存描述供 Step 2 救援使用
+            savedCharacterDesc = desc || "A cute character mascot"; 
+
             toggleLoading('generate-base-character', 'gen-base-spinner', true);
-            previewContainer.innerHTML = '<div class="text-center p-4"><span class="loader"></span><p class="mt-2 text-slate-500 font-bold text-sm">正在對接 AI 繪製中...</p></div>';
+            previewContainer.innerHTML = '<div class="text-center p-4"><span class="loader"></span><p class="mt-2 text-slate-500 font-bold text-sm">Pro AI 繪製中...</p></div>';
 
             try {
                 if (fileInput.files[0]) {
@@ -262,11 +258,11 @@
                         previewContainer.innerHTML = `<img src="${e.target.result}" class="max-h-[250px] rounded-2xl shadow-sm">`;
                         document.getElementById('step-2-section').classList.remove('opacity-40', 'pointer-events-none');
                         toggleLoading('generate-base-character', 'gen-base-spinner', false);
-                        showStatus("照片讀取完畢！");
+                        showStatus("照片讀取成功！");
                     };
                     reader.readAsDataURL(fileInput.files[0]);
                 } else {
-                    const prompt = `Clear standalone mascot for LINE sticker. ${desc}. Style: ${currentStylePrompt}. Solid flat white background, full body, high resolution.`;
+                    const prompt = `Professional standalone character mascot for LINE sticker. ${desc}. Style: ${currentStylePrompt}. Solid flat white background, full body, high resolution.`;
                     const result = await callAPI(
                         `https://generativelanguage.googleapis.com/v1beta/models/imagen-4.0-generate-001:predict`,
                         { 
@@ -281,7 +277,7 @@
                         document.getElementById('step-2-section').classList.remove('opacity-40', 'pointer-events-none');
                         showStatus("角色基底生成成功！");
                     } else {
-                        throw new Error("模型未回傳數據，請重試。");
+                        throw new Error("模型未回傳數據");
                     }
                 }
             } catch (err) {
@@ -292,7 +288,7 @@
             }
         });
 
-        // Step 2: Pack Generation
+        // Step 2: Pack Generation (With Smart Fallback)
         document.getElementById('generate-stickers').addEventListener('click', async () => {
             const phrases = Array.from({length: 9}).map((_, i) => document.getElementById(`phrase-${i}`).value);
             const shouldRemoveBg = document.getElementById('remove-bg-toggle').checked;
@@ -312,10 +308,14 @@
             }
 
             for (let i = 0; i < 9; i++) {
-                try {
-                    const phrase = phrases[i];
-                    const prompt = `Maintain exactly the same character features. Draw the character expressing "${phrase}". Style: ${currentStylePrompt}. Solid plain white background, high quality, no text.`;
+                let genBase64 = null;
+                const phrase = phrases[i];
+                const slot = document.getElementById(`sticker-slot-${i}`);
 
+                try {
+                    // 1. 優先嘗試 Gemini 2.5 (圖生圖)
+                    const prompt = `Maintain exactly the same character features. Draw the character expressing "${phrase}". Style: ${currentStylePrompt}. Solid plain white background, high quality, no text.`;
+                    
                     const result = await callAPI(
                         `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image-preview:generateContent`,
                         {
@@ -326,28 +326,49 @@
                                 ]
                             }],
                             generationConfig: { responseModalities: ['TEXT', 'IMAGE'] }
-                        }
+                        },
+                        2 // 少試幾次以便快速切換
                     );
+                    genBase64 = result.candidates?.[0]?.content?.parts?.find(p => p.inlineData)?.inlineData?.data;
 
-                    const genBase64 = result.candidates?.[0]?.content?.parts?.find(p => p.inlineData)?.inlineData?.data;
-                    
-                    if (genBase64) {
-                        const finalImg = await createStickerWithText(`data:image/png;base64,${genBase64}`, phrase, shouldRemoveBg);
-                        const slot = document.getElementById(`sticker-slot-${i}`);
-                        slot.innerHTML = `<img src="${finalImg}" class="hover:scale-105 transition-all duration-300">`;
-                        stickersData.push({ name: `sticker_${i+1}.png`, data: finalImg });
-                    }
                 } catch (err) {
-                    console.error(err);
-                    document.getElementById(`sticker-slot-${i}`).innerHTML = `<div class="p-2 text-center text-red-500 font-bold text-[10px]">失敗: ${err.message.substring(0,30)}</div>`;
+                    console.warn(`Gemini 2.5 failed for ${i}, switching to Imagen 4.0 fallback. Error: ${err.message}`);
+                    
+                    // 2. 自動切換 Imagen 4.0 (文生圖救援模式)
+                    // 使用已保存的角色描述 + 動作關鍵詞
+                    try {
+                        slot.innerHTML = '<div class="absolute inset-0 flex flex-col items-center justify-center bg-white/60"><span class="loader"></span><span class="text-[8px] text-gray-500 mt-1">救援模式...</span></div>';
+                        
+                        const fallbackPrompt = `LINE Sticker. Character: ${savedCharacterDesc}. Action/Emotion: ${phrase}. Style: ${currentStylePrompt}. Solid white background, isolated, full body, clean lines.`;
+                        
+                        const resultFallback = await callAPI(
+                            `https://generativelanguage.googleapis.com/v1beta/models/imagen-4.0-generate-001:predict`,
+                            { 
+                                instances: { prompt: fallbackPrompt }, 
+                                parameters: { sampleCount: 1 } 
+                            }
+                        );
+                        if (resultFallback.predictions?.[0]) {
+                            genBase64 = resultFallback.predictions[0].bytesBase64Encoded;
+                        }
+                    } catch (fallbackErr) {
+                        console.error(`Fallback also failed: ${fallbackErr}`);
+                        slot.innerHTML = `<div class="p-2 text-center text-red-500 font-bold text-[10px]">生成失敗</div>`;
+                        continue;
+                    }
+                }
+
+                if (genBase64) {
+                    const finalImg = await createStickerWithText(`data:image/png;base64,${genBase64}`, phrase, shouldRemoveBg);
+                    slot.innerHTML = `<img src="${finalImg}" class="hover:scale-105 transition-all duration-300">`;
+                    stickersData.push({ name: `sticker_${i+1}.png`, data: finalImg });
                 }
             }
             
             toggleLoading('generate-stickers', 'gen-stickers-spinner', false);
-            showStatus("9 張貼圖生成完畢！");
+            showStatus(stickersData.length === 9 ? "全套貼圖生成完畢！" : "部分貼圖生成完畢");
         });
 
-        // Synthesis: Pro Scaling & Transparency
         async function createStickerWithText(imgSrc, text, removeBg) {
             return new Promise((resolve) => {
                 const img = new Image();
@@ -410,7 +431,6 @@
             });
         }
 
-        // ZIP Export
         document.getElementById('download-all-stickers').addEventListener('click', async () => {
             if (stickersData.length === 0) return;
             const zip = new JSZip();
@@ -422,7 +442,6 @@
             link.click();
         });
 
-        // Start connection monitor
         window.onload = updateSystemStatus;
     </script>
 </body>
