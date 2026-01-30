@@ -1,1 +1,403 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>一站式 LINE 貼圖生成器 Pro</title>
+   <title>Calumai Made</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.7.1/jszip.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&display=swap');
+        body { font-family: 'Noto Sans TC', sans-serif; background-color: #f0f2f5; }
+        .gradient-bg { background: linear-gradient(135deg, #06C755 0%, #05a346 100%); }
+        .step-card { background: white; border-radius: 1.5rem; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1); }
+        .loader { border: 3px solid #f3f3f3; border-top: 3px solid #06C755; border-radius: 50%; width: 24px; height: 24px; animation: spin 1s linear infinite; display: inline-block; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .sticker-preview { aspect-ratio: 1/1; background-image: radial-gradient(#ddd 1px, transparent 1px); background-size: 10px 10px; border-radius: 0.75rem; overflow: hidden; position: relative; border: 1px solid #e5e7eb; }
+        .sticker-preview img { width: 100%; height: 100%; object-fit: contain; }
+        .style-btn.active { border-color: #06C755; background-color: #f0fdf4; color: #166534; font-weight: 700; }
+        
+        /* Toggle Switch */
+        .switch { position: relative; display: inline-block; width: 50px; height: 26px; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 34px; }
+        .slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 4px; bottom: 4px; background-color: white; transition: .4s; border-radius: 50%; }
+        input:checked + .slider { background-color: #06C755; }
+        input:checked + .slider:before { transform: translateX(24px); }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+    <div id="app" class="max-w-4xl mx-auto">
+        <header class="text-center mb-10">
+            <h1 class="text-4xl font-extrabold text-gray-800 mb-2">一站式 <span class="text-[#06C755]">LINE</span> 貼圖生成器 <span class="text-sm bg-black text-white px-2 py-1 rounded align-middle">PRO</span></h1>
+            <p class="text-gray-600">全自動 AI 生成、比例校正、智慧去背</p>
+        </header>
 
+        <!-- Step 1: Character -->
+        <section class="step-card p-6 mb-8">
+            <div class="flex items-center mb-4">
+                <span class="gradient-bg text-white w-8 h-8 rounded-full flex items-center justify-center font-bold mr-3">1</span>
+                <h2 class="text-xl font-bold text-gray-800">提供你的角色形象</h2>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="space-y-4">
+                    <label class="block">
+                        <span class="text-sm font-medium text-gray-700">上傳照片參考 (選填)</span>
+                        <input type="file" id="upload-image" accept="image/*" class="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-green-50 file:text-green-700 hover:file:bg-green-100">
+                    </label>
+                    <div>
+                        <span class="text-sm font-medium text-gray-700">描述你的角色</span>
+                        <textarea id="character-description" rows="3" class="mt-1 block w-full rounded-xl border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500 p-3 bg-gray-50" placeholder="例如：一隻穿著黃色雨衣、圓滾滾的柴犬。"></textarea>
+                    </div>
+                    <button id="generate-base-character" class="w-full py-3 px-6 rounded-xl text-white font-bold gradient-bg hover:opacity-90 transition-all flex items-center justify-center gap-2">
+                        <span id="gen-base-spinner" class="loader hidden"></span>
+                        生成/確認基礎角色
+                    </button>
+                </div>
+                <div id="base-character-preview" class="border-2 border-dashed border-gray-200 rounded-2xl flex items-center justify-center bg-gray-50 min-h-[200px]">
+                    <p class="text-gray-400 text-sm">角色預覽將在此顯示</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Step 2: Style & Phrases -->
+        <section class="step-card p-6 mb-8 opacity-50 pointer-events-none transition-opacity" id="step-2-section">
+            <div class="flex items-center mb-4">
+                <span class="gradient-bg text-white w-8 h-8 rounded-full flex items-center justify-center font-bold mr-3">2</span>
+                <h2 class="text-xl font-bold text-gray-800">選擇風格與編輯文案</h2>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-6">
+                <div>
+                    <p class="text-sm font-medium text-gray-700 mb-3">選擇貼圖風格：</p>
+                    <div id="style-selection" class="flex gap-2 flex-wrap">
+                        <button data-style="Studio Ghibli Art" class="style-btn px-3 py-1.5 text-sm rounded-full border-2 border-gray-200 text-gray-600">吉卜力風 ✨</button>
+                        <button data-style="Cute Cartoon" class="style-btn active px-3 py-1.5 text-sm rounded-full border-2 border-gray-200 text-gray-600">可愛卡通</button>
+                        <button data-style="Water Color" class="style-btn px-3 py-1.5 text-sm rounded-full border-2 border-gray-200 text-gray-600">手繪水彩</button>
+                        <button data-style="Pixel Art" class="style-btn px-3 py-1.5 text-sm rounded-full border-2 border-gray-200 text-gray-600">像素藝術</button>
+                    </div>
+                </div>
+                <div class="flex items-center gap-4 bg-gray-50 p-4 rounded-xl border border-gray-200">
+                    <label class="switch">
+                        <input type="checkbox" id="remove-bg-toggle" checked>
+                        <span class="slider"></span>
+                    </label>
+                    <div>
+                        <p class="text-sm font-bold text-gray-800">開啟去背模式 (Pro)</p>
+                        <p class="text-xs text-gray-500">自動將生成圖片的白色背景轉為透明</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mb-6">
+                <p class="text-sm font-medium text-gray-700 mb-3">編輯貼圖文案 (9句日常用語):</p>
+                <div id="text-inputs" class="grid grid-cols-3 gap-3">
+                    <!-- Inputs injected via JS -->
+                </div>
+            </div>
+            
+            <button id="generate-stickers" class="w-full py-4 px-6 rounded-xl text-white font-bold bg-gray-800 hover:bg-black transition-all flex items-center justify-center gap-2">
+                <span id="gen-stickers-spinner" class="loader hidden"></span>
+                開始生成全套貼圖 (共 9 張)
+            </button>
+        </section>
+
+        <!-- Step 3: Result -->
+        <section class="step-card p-6 mb-8 hidden" id="step-3-section">
+            <div class="flex items-center mb-6 justify-between">
+                <div class="flex items-center">
+                    <span class="gradient-bg text-white w-8 h-8 rounded-full flex items-center justify-center font-bold mr-3">3</span>
+                    <h2 class="text-xl font-bold text-gray-800">你的專屬貼圖組</h2>
+                </div>
+                <button id="download-all-stickers" class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-bold hover:bg-blue-700 transition-colors">
+                    下載透明 PNG 壓縮包 (.zip)
+                </button>
+            </div>
+
+            <div id="final-sticker-grid" class="grid grid-cols-3 gap-4">
+                <!-- Stickers will be shown here -->
+            </div>
+        </section>
+
+        <!-- Status Box -->
+        <div id="status-message" class="fixed bottom-4 right-4 max-w-xs bg-white p-4 rounded-xl shadow-2xl border-l-4 border-green-500 hidden transform translate-y-20 transition-transform">
+            <p class="text-sm text-gray-700 font-medium"></p>
+        </div>
+    </div>
+
+    <script>
+        const apiKey = ""; 
+        let baseCharacterImage = null; 
+        let selectedStyle = "Cute Cartoon";
+        const defaultPhrases = ["早安", "謝謝", "哈哈哈", "加油", "收到", "辛苦了", "晚安", "沒問題", "崩潰中"];
+        const stickersData = [];
+
+        // UI Helpers
+        const showStatus = (msg) => {
+            const el = document.getElementById('status-message');
+            el.querySelector('p').innerText = msg;
+            el.classList.remove('hidden');
+            setTimeout(() => el.classList.remove('translate-y-20'), 10);
+            setTimeout(() => {
+                el.classList.add('translate-y-20');
+                setTimeout(() => el.classList.add('hidden'), 500);
+            }, 3000);
+        };
+
+        const toggleLoading = (btnId, spinnerId, isLoading) => {
+            const btn = document.getElementById(btnId);
+            const spinner = document.getElementById(spinnerId);
+            if (isLoading) {
+                btn.disabled = true;
+                spinner.classList.remove('hidden');
+            } else {
+                btn.disabled = false;
+                spinner.classList.add('hidden');
+            }
+        };
+
+        // Initialize Phrase Inputs
+        const phraseContainer = document.getElementById('text-inputs');
+        defaultPhrases.forEach((p, i) => {
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.value = p;
+            input.className = "p-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-green-400 focus:outline-none";
+            input.id = `phrase-${i}`;
+            phraseContainer.appendChild(input);
+        });
+
+        // Style Selection
+        document.querySelectorAll('.style-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.style-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                selectedStyle = btn.dataset.style;
+            });
+        });
+
+        // API Call Wrapper with Backoff
+        async function callAPI(url, payload, retries = 5) {
+            let delay = 1000;
+            for (let i = 0; i < retries; i++) {
+                try {
+                    const response = await fetch(`${url}?key=${apiKey}`, {
+                        method: 'POST',
+                        body: JSON.stringify(payload)
+                    });
+                    if (response.ok) return await response.json();
+                    if (response.status === 429) throw new Error('Quota exceeded');
+                } catch (e) {
+                    if (i === retries - 1) throw e;
+                    await new Promise(r => setTimeout(r, delay));
+                    delay *= 2;
+                }
+            }
+        }
+
+        // 1. Generate Base Character
+        document.getElementById('generate-base-character').addEventListener('click', async () => {
+            const desc = document.getElementById('character-description').value;
+            const fileInput = document.getElementById('upload-image');
+            
+            if (!desc && !fileInput.files[0]) {
+                showStatus("請提供角色描述或上傳照片");
+                return;
+            }
+
+            toggleLoading('generate-base-character', 'gen-base-spinner', true);
+            const previewContainer = document.getElementById('base-character-preview');
+            previewContainer.innerHTML = '<span class="loader"></span><span class="ml-2 text-gray-500">繪製角色中...</span>';
+
+            try {
+                if (fileInput.files[0]) {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        baseCharacterImage = e.target.result.split(',')[1];
+                        previewContainer.innerHTML = `<img src="${e.target.result}" class="max-h-full rounded-lg">`;
+                        document.getElementById('step-2-section').classList.remove('opacity-50', 'pointer-events-none');
+                    };
+                    reader.readAsDataURL(fileInput.files[0]);
+                } else {
+                    let stylePrompt = selectedStyle;
+                    if (selectedStyle === "Studio Ghibli Art") {
+                        stylePrompt = "Studio Ghibli hand-drawn anime aesthetic, Hayao Miyazaki style, warm light, lush texture";
+                    }
+
+                    const prompt = `A high-quality character mascot for a sticker. ${desc}. Style: ${stylePrompt}. Solid flat white background, full body visible, isolated.`;
+                    const result = await callAPI(
+                        `https://generativelanguage.googleapis.com/v1beta/models/imagen-4.0-generate-001:predict`,
+                        { instances: { prompt }, parameters: { sampleCount: 1 } }
+                    );
+                    
+                    baseCharacterImage = result.predictions[0].bytesBase64Encoded;
+                    previewContainer.innerHTML = `<img src="data:image/png;base64,${baseCharacterImage}" class="max-h-full rounded-lg">`;
+                    document.getElementById('step-2-section').classList.remove('opacity-50', 'pointer-events-none');
+                }
+                showStatus("角色已確認！");
+            } catch (err) {
+                console.error(err);
+                previewContainer.innerHTML = '<p class="text-red-500 p-4">生成失敗，請重試。</p>';
+            } finally {
+                toggleLoading('generate-base-character', 'gen-base-spinner', false);
+            }
+        });
+
+        // 2. Generate Full Set
+        document.getElementById('generate-stickers').addEventListener('click', async () => {
+            const phrases = Array.from({length: 9}).map((_, i) => document.getElementById(`phrase-${i}`).value);
+            const shouldRemoveBg = document.getElementById('remove-bg-toggle').checked;
+            
+            toggleLoading('generate-stickers', 'gen-stickers-spinner', true);
+            document.getElementById('step-3-section').classList.remove('hidden');
+            const grid = document.getElementById('final-sticker-grid');
+            grid.innerHTML = '';
+            stickersData.length = 0;
+
+            for (let i = 0; i < 9; i++) {
+                const div = document.createElement('div');
+                div.className = "sticker-preview";
+                div.id = `sticker-slot-${i}`;
+                div.innerHTML = '<div class="absolute inset-0 flex items-center justify-center bg-white/50"><span class="loader"></span></div>';
+                grid.appendChild(div);
+            }
+
+            for (let i = 0; i < 9; i++) {
+                try {
+                    const phrase = phrases[i];
+                    let styleDetail = selectedStyle;
+                    if (selectedStyle === "Studio Ghibli Art") {
+                        styleDetail = "Studio Ghibli hand-drawn anime style, clean lines, cozy";
+                    }
+
+                    const prompt = `Create a sticker variation based on the provided character. Emotion/Action: ${phrase}. Style: ${styleDetail}. Use a flat, solid white background. No text.`;
+
+                    const payload = {
+                        contents: [{
+                            parts: [
+                                { text: prompt },
+                                { inlineData: { mimeType: "image/png", data: baseCharacterImage } }
+                            ]
+                        }],
+                        generationConfig: { responseModalities: ['TEXT', 'IMAGE'] }
+                    };
+
+                    const result = await callAPI(
+                        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image-preview:generateContent`,
+                        payload
+                    );
+
+                    const generatedBase64 = result.candidates?.[0]?.content?.parts?.find(p => p.inlineData)?.inlineData?.data;
+                    
+                    if (generatedBase64) {
+                        const finalImg = await createStickerWithText(`data:image/png;base64,${generatedBase64}`, phrase, shouldRemoveBg);
+                        const slot = document.getElementById(`sticker-slot-${i}`);
+                        slot.innerHTML = `<img src="${finalImg}">`;
+                        stickersData.push({ name: `sticker_${i+1}.png`, data: finalImg });
+                    }
+                } catch (err) {
+                    console.error(`Sticker ${i} failed`, err);
+                    document.getElementById(`sticker-slot-${i}`).innerHTML = '<p class="text-[10px] text-red-500 p-2 text-center">生成失敗</p>';
+                }
+            }
+            
+            toggleLoading('generate-stickers', 'gen-stickers-spinner', false);
+            showStatus("去背貼圖組生成完成！");
+        });
+
+        // --- 優化後的貼圖合成邏輯：包含智慧去背演算法 ---
+        async function createStickerWithText(imgSrc, text, removeBg) {
+            return new Promise((resolve) => {
+                const img = new Image();
+                img.crossOrigin = "anonymous";
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    const size = 370; 
+                    canvas.width = size;
+                    canvas.height = size;
+                    const ctx = canvas.getContext('2d');
+
+                    // 1. 先繪製原始圖片到一個臨時 Canvas 進行去背處理
+                    const tempCanvas = document.createElement('canvas');
+                    tempCanvas.width = img.width;
+                    tempCanvas.height = img.height;
+                    const tCtx = tempCanvas.getContext('2d');
+                    tCtx.drawImage(img, 0, 0);
+
+                    if (removeBg) {
+                        const imageData = tCtx.getImageData(0, 0, tempCanvas.width, tempCanvas.height);
+                        const data = imageData.data;
+                        // 智慧去背演算法：掃描所有像素，將接近純白的像素轉為透明
+                        // 容差設定為 230-255 (根據 AI 生成的白底特性調整)
+                        const threshold = 235; 
+                        for (let i = 0; i < data.length; i += 4) {
+                            const r = data[i];
+                            const g = data[i + 1];
+                            const b = data[i + 2];
+                            if (r > threshold && g > threshold && b > threshold) {
+                                data[i + 3] = 0; // Alpha 設為 0
+                            }
+                        }
+                        tCtx.putImageData(imageData, 0, 0);
+                    }
+
+                    // 2. 在主畫布繪製處理後的圖片 (保持比例)
+                    ctx.imageSmoothingEnabled = true;
+                    ctx.imageSmoothingQuality = 'high';
+
+                    const padding = 35;
+                    const maxWidth = size - padding * 2;
+                    const maxHeight = size - (padding * 2 + 50);
+
+                    const ratio = Math.min(maxWidth / img.width, maxHeight / img.height);
+                    const newWidth = img.width * ratio;
+                    const newHeight = img.height * ratio;
+
+                    const xOffset = (size - newWidth) / 2;
+                    const yOffset = (size - 70 - newHeight) / 2 + 15;
+
+                    ctx.drawImage(tempCanvas, xOffset, yOffset, newWidth, newHeight);
+
+                    // 3. 繪製文字
+                    ctx.font = 'bold 44px "Noto Sans TC", sans-serif';
+                    ctx.textAlign = 'center';
+                    const x = size / 2;
+                    const y = size - 35;
+                    
+                    // 文字描邊 (提昇辨識度)
+                    ctx.strokeStyle = 'white';
+                    ctx.lineWidth = 10;
+                    ctx.lineJoin = 'round';
+                    ctx.strokeText(text, x, y);
+
+                    ctx.strokeStyle = '#333';
+                    ctx.lineWidth = 4;
+                    ctx.strokeText(text, x, y);
+
+                    ctx.fillStyle = 'white';
+                    ctx.fillText(text, x, y);
+
+                    resolve(canvas.toDataURL('image/png', 1.0)); 
+                };
+                img.src = imgSrc;
+            });
+        }
+
+        document.getElementById('download-all-stickers').addEventListener('click', async () => {
+            if (stickersData.length === 0) return;
+            const zip = new JSZip();
+            stickersData.forEach(sticker => {
+                const base64Data = sticker.data.split(',')[1];
+                zip.file(sticker.name, base64Data, { base64: true });
+            });
+            const content = await zip.generateAsync({ type: "blob" });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(content);
+            link.download = "line_stickers_pro.zip";
+            link.click();
+        });
+    </script>
+</body>
+</html>
